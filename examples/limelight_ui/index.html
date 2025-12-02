@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LimelightIT ADR Orchestrator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="sidebar__header">
+        <div class="logo">LimelightIT</div>
+        <div class="tenant-switcher" aria-label="Tenant switcher">Marudhar Industries Limited • Aluminium Rolling Mill</div>
+      </div>
+      <nav class="nav">
+        <button class="nav__item active" data-target="overview">Overview</button>
+        <button class="nav__item" data-target="forecast">Forecast</button>
+        <button class="nav__item" data-target="flex">Flex Targeting</button>
+        <button class="nav__item" data-target="dispatch">Dispatch</button>
+        <button class="nav__item" data-target="mv">M&amp;V</button>
+        <button class="nav__item" data-target="assets">Assets</button>
+        <button class="nav__item" data-target="data">Data Explorer</button>
+        <button class="nav__item" data-target="audit">Audit &amp; Security</button>
+        <button class="nav__item" data-target="settings">Settings</button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar__left">
+          <span class="topbar__title">Product name: LimelightIT ADR Orchestrator</span>
+        </div>
+        <div class="topbar__right">
+          <button class="chip">Date Range (Today ▾)</button>
+          <button class="chip">Timezone (IST ▾)</button>
+          <button class="icon-chip">🔔 Notifications (3)</button>
+          <button class="icon-chip">? Help</button>
+          <button class="chip">👤 Tarun (Admin ▾)</button>
+        </div>
+      </header>
+
+      <div class="banner" role="status">Demo Mode — simulated EMS writes with comfort rails. (<a href="#">Learn more</a>)</div>
+
+      <section id="overview" class="page active" aria-label="Overview">
+        <header class="page__header">
+          <div>
+            <p class="breadcrumb">Overview</p>
+            <h1>Overview — Marudhar Industries</h1>
+            <p class="subhead">Live load, next peak, and current flexibility.</p>
+          </div>
+        </header>
+
+        <div class="grid grid--hero">
+          <article class="card card--xl">
+            <div class="card__header">
+              <div>
+                <p class="eyebrow">Live Load vs Forecast</p>
+                <p class="subtext">Updated a few seconds ago</p>
+              </div>
+              <div class="kpi">
+                <span class="status status--stable" id="statusBadge">Stable</span>
+                <span class="kpi__label">Current kW</span>
+                <span class="kpi__value" id="currentKw">1.64 MW</span>
+              </div>
+            </div>
+            <div class="legend">
+              <span class="legend__item legend--actual">Actual kW</span>
+              <span class="legend__item legend--p50">P50 Forecast</span>
+              <span class="legend__item legend--band">P90–P10 Band</span>
+            </div>
+            <div class="chart" aria-label="Live Load chart">
+              <div class="chart__area chart__area--band"></div>
+              <div class="chart__line chart__line--p50"></div>
+              <div class="chart__line chart__line--actual"></div>
+              <div class="chart__xaxis">Now → +6h</div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card__header">
+              <div>
+                <p class="eyebrow">Next Peak</p>
+                <h3>Next Peak Window</h3>
+              </div>
+            </div>
+            <p class="metric">Today 18:00–19:00</p>
+            <p class="metric">Projected Peak: <strong>1.88 MW</strong></p>
+            <p class="metric">Target Reduction: <strong>5%</strong></p>
+            <button class="button">Plan Event</button>
+          </article>
+
+          <article class="card">
+            <div class="card__header">
+              <div>
+                <p class="eyebrow">Flex Available Now</p>
+                <h3>Instantaneous Flex (Comfort-Safe)</h3>
+              </div>
+            </div>
+            <p class="big-number">~92 kW</p>
+            <div class="chip-row" id="flexChips"></div>
+          </article>
+
+          <article class="card">
+            <div class="card__header">
+              <div>
+                <p class="eyebrow">Today So Far</p>
+                <h3>Energy Summary</h3>
+              </div>
+            </div>
+            <p class="metric">Energy: 18.4 MWh</p>
+            <p class="metric">Avg kW: 1.53 MW</p>
+            <p class="metric">Max kW: 1.91 MW @ 15:30</p>
+          </article>
+        </div>
+
+        <div class="grid">
+          <article class="card card--table">
+            <div class="card__header">
+              <div>
+                <p class="eyebrow">Row B — Cohorts &amp; Health</p>
+                <h3>Flex Cohorts (Top Candidates)</h3>
+              </div>
+              <button class="button button--ghost" aria-label="Add to plan">Add to Plan</button>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Zone/Asset</th><th>Flex kW</th><th>Comfort Risk</th><th>Confidence</th><th>Last Adjusted</th></tr>
+              </thead>
+              <tbody id="cohortTable"></tbody>
+            </table>
+          </article>
+
+          <article class="card card--table">
+            <div class="card__header">
+              <div>
+                <p class="eyebrow">System Health</p>
+                <h3>Connections &amp; Guardrails</h3>
+              </div>
+            </div>
+            <ul class="stat-list" id="healthStats"></ul>
+          </article>
+        </div>
+
+        <div class="grid grid--actions">
+          <article class="card card--timeline">
+            <div class="card__header">
+              <div>
+                <p class="eyebrow">Row C — Activity</p>
+                <h3>Recent Actions</h3>
+              </div>
+            </div>
+            <ul class="timeline" id="timeline"></ul>
+          </article>
+          <div class="button-group button-group--right">
+            <button class="button">Open Dispatch</button>
+            <button class="button button--ghost">View M&amp;V</button>
+            <button class="button button--ghost">Export Snapshot</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="forecast" class="page" aria-label="Forecast">
+        <header class="page__header">
+          <p class="breadcrumb">Forecast</p>
+          <h1>Forecast — Peaks &amp; Uncertainty</h1>
+          <p class="subhead">Next 24 hours with weather &amp; ToD overlays.</p>
+        </header>
+        <div class="grid grid--hero">
+          <article class="card card--xl">
+            <div class="card__header">
+              <div>
+                <p class="eyebrow">Row A — Main chart</p>
+                <h3>Next 24h Load Forecast</h3>
+              </div>
+              <div class="chip-row">
+                <button class="chip chip--active">Show Weather</button>
+                <button class="chip chip--active">Show Confidence Band</button>
+                <button class="chip">Compare Yesterday</button>
+              </div>
+            </div>
+            <div class="chart chart--forecast">
+              <div class="chart__area chart__area--band"></div>
+              <div class="chart__line chart__line--p50"></div>
+              <div class="chart__line chart__line--actual"></div>
+              <div class="chart__xaxis">Past → Next 24h</div>
+              <div class="tariff-strip tariff-strip--offpeak">Off-peak</div>
+              <div class="tariff-strip tariff-strip--peak">Peak</div>
+            </div>
+          </article>
+          <article class="card card--side">
+            <div class="card__header">
+              <p class="eyebrow">Highlights</p>
+              <h3>Projected Daily Peak</h3>
+            </div>
+            <p class="metric">1.92 MW @ 18:20</p>
+            <p class="metric">Peak Window: 18:00–19:00</p>
+            <p class="metric">Suggested Target: 5% (≈95 kW)</p>
+            <button class="button">Plan Event from 18:00</button>
+          </article>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <div class="card__header"><p class="eyebrow">Row B — Drivers</p><h3>Weather Impact</h3></div>
+            <p class="metric">Outdoor Temp now: 29.8°C</p>
+            <p class="metric">Sensitivity: +12.4 kW/°C</p>
+          </article>
+          <article class="card">
+            <div class="card__header"><p class="eyebrow">Pattern Signals</p><h3>Schedule &amp; Effects</h3></div>
+            <p class="metric">Shift schedule: Active</p>
+            <p class="metric">Weekend effect: None</p>
+            <p class="metric">Maintenance: None</p>
+          </article>
+        </div>
+
+        <div class="grid">
+          <article class="card card--wide">
+            <div class="card__header"><p class="eyebrow">Row C — Scenario</p><h3>What-If</h3></div>
+            <div class="controls">
+              <label>Target reduction (3–7%) <input type="range" id="targetReduction" min="3" max="7" value="5" step="1"></label>
+              <label>Event length (30–60m) <input type="range" id="eventLength" min="30" max="60" value="45" step="5"></label>
+            </div>
+            <p class="metric">Estimated feasible flex: <span id="feasibleFlex">110</span> kW</p>
+            <button class="button">Send to Flex Targeting</button>
+          </article>
+        </div>
+      </section>
+
+      <section id="flex" class="page" aria-label="Flex Targeting">
+        <header class="page__header">
+          <p class="breadcrumb">Flex Targeting</p>
+          <h1>Flex Targeting — Rank &amp; Pack</h1>
+          <p class="subhead">Select the safest, most effective flexibility.</p>
+        </header>
+
+        <div class="card">
+          <div class="card__header"><p class="eyebrow">Row A — Filters</p><h3>Filters</h3></div>
+          <div class="chip-row">
+            <button class="chip chip--active">Group: All</button>
+            <button class="chip chip--active">Comfort Risk: Low/Med</button>
+            <button class="chip">Protocol: —</button>
+            <input class="search" type="search" placeholder="Search assets…" aria-label="Search assets">
+          </div>
+        </div>
+
+        <div class="grid grid--split">
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">Row B — Rank table</p><h3>Ranked Candidates</h3></div>
+            <table>
+              <thead><tr><th>Select</th><th>Asset/Zone</th><th>Control</th><th>Flex kW</th><th>Comfort Risk</th><th>Confidence</th><th>Notes</th></tr></thead>
+              <tbody id="rankTable"></tbody>
+            </table>
+          </article>
+
+          <article class="card card--side">
+            <div class="card__header"><p class="eyebrow">Packer</p><h3>Target</h3></div>
+            <label>MW Target: <span id="targetValue">95</span> kW <input type="range" id="targetSlider" min="50" max="130" value="95" step="5"></label>
+            <div class="chip-row" id="selectedList"></div>
+            <div class="meter" aria-label="Flex meter">
+              <div class="meter__fill" id="meterFill" style="width:0%"></div>
+            </div>
+            <p class="metric"><span id="meterValue">0</span> / <span id="meterTarget">95</span> kW</p>
+            <div class="button-group">
+              <button class="button">Create Dispatch Plan</button>
+              <button class="button button--ghost">Preview Impact</button>
+            </div>
+          </article>
+        </div>
+
+        <p class="microcopy">Comfort rails apply automatically. Overrides require Admin.</p>
+      </section>
+
+      <section id="dispatch" class="page" aria-label="Dispatch">
+        <header class="page__header">
+          <p class="breadcrumb">Dispatch / EVT-2025-12-01-1800</p>
+          <h1>Dispatch — Stage → Commit → Rollback</h1>
+        </header>
+
+        <div class="grid grid--hero">
+          <article class="card"><div class="card__header"><p class="eyebrow">Row A — Plan summary</p><h3>Event Window</h3></div><p class="metric">Start 18:00 • End 19:00 • Duration 60m</p></article>
+          <article class="card"><div class="card__header"><p class="eyebrow">Objective</p><h3>Target 95 kW (≈5%)</h3></div></article>
+          <article class="card"><div class="card__header"><p class="eyebrow">Status</p><h3 id="dispatchStatus">Draft</h3></div><div class="pill pill--draft">Draft</div></article>
+        </div>
+
+        <div class="controls-grid" id="dispatchControls"></div>
+
+        <article class="card">
+          <div class="card__header"><p class="eyebrow">Row C — Preview</p><h3>Predicted Impact</h3></div>
+          <p class="metric">Total reduction: ~74 kW (range 61–88)</p>
+          <p class="metric">Peak shave: ~4.1%</p>
+          <div class="chart chart--preview"></div>
+          <div class="alert">Zone BAY-1 temp predicted 25.6°C (OK)</div>
+        </article>
+
+        <div class="button-group">
+          <button class="button" id="stageBtn">Stage</button>
+          <button class="button" id="commitBtn" disabled>Commit</button>
+          <button class="button button--ghost" id="rollbackBtn" disabled>Rollback</button>
+          <button class="button button--ghost">Schedule</button>
+        </div>
+
+        <p class="microcopy">Two-phase commit with auto-rollback on comfort breach.</p>
+
+        <article class="card card--timeline">
+          <div class="card__header"><p class="eyebrow">Side drawer — Live log</p><h3>Live Log</h3></div>
+          <ul class="timeline" id="liveLog"></ul>
+        </article>
+      </section>
+
+      <section id="mv" class="page" aria-label="Measurement & Verification">
+        <header class="page__header">
+          <p class="breadcrumb">M&amp;V / EVT-2025-12-01-1800</p>
+          <h1>M&amp;V — Verified Reduction &amp; Settlement</h1>
+        </header>
+        <article class="card card--xl">
+          <div class="card__header"><p class="eyebrow">Row A — Baseline vs Actual</p><h3>Baseline vs Actual</h3></div>
+          <div class="chart chart--mv"></div>
+          <div class="chip-row">
+            <span class="chip chip--solid">Avg kW Reduction: 95</span>
+            <span class="chip chip--solid">Event kWh Saved: 95.7</span>
+            <span class="chip chip--solid">Peak Shave: 5.1%</span>
+            <span class="chip chip--solid">₹ Avoided: ₹ 28,710</span>
+          </div>
+        </article>
+
+        <article class="card card--table">
+          <div class="card__header"><p class="eyebrow">Row B — Ledger</p><h3>Event Ledger</h3></div>
+          <table>
+            <thead><tr><th>Interval</th><th>Baseline kW</th><th>Actual kW</th><th>Δ kW</th><th>Δ kWh</th><th>CI Low</th><th>CI High</th></tr></thead>
+            <tbody id="ledgerTable"></tbody>
+          </table>
+          <div class="chip-row"><span class="chip chip--solid">Comfort Compliance: OK</span><span class="chip chip--solid">Writes Success: 100%</span><span class="chip chip--solid">Rollbacks: 0</span></div>
+        </article>
+
+        <div class="button-group">
+          <button class="button">Export Report (PDF)</button>
+          <button class="button button--ghost">Export Data (CSV)</button>
+          <button class="button button--ghost">Share Link</button>
+        </div>
+      </section>
+
+      <section id="assets" class="page" aria-label="Assets">
+        <header class="page__header">
+          <p class="breadcrumb">Assets</p>
+          <h1>Assets — Process &amp; Utilities</h1>
+        </header>
+        <div class="chip-row">
+          <button class="chip chip--active">All</button>
+          <button class="chip">Process</button>
+          <button class="chip">Utilities</button>
+          <button class="chip">Lighting</button>
+        </div>
+        <div class="grid">
+          <article class="card"><div class="card__header"><h3>Summary</h3></div><div class="chip-row"><span class="chip chip--solid">Active: 14</span><span class="chip chip--solid">Writable: 6</span><span class="chip chip--solid">Alerts: 0</span><span class="chip chip--solid">Last Sync: just now</span></div></article>
+        </div>
+        <div class="grid">
+          <article class="card card--asset"><h3>CHILLER-PLANT-01</h3><p>Live: 198 kW</p><p>CHW SP: 6.5°C</p><p>Status: OK</p><div class="button-group"><button class="button button--ghost">Details</button><button class="button">Add to Plan</button></div></article>
+          <article class="card card--asset"><h3>CR-4H-01</h3><p>Live: 244 kW</p><p>Status: High load</p><button class="button button--ghost">Details</button></article>
+          <article class="card card--asset"><h3>LIGHTING-PLANT</h3><p>Live: 41 kW</p><p>Trim Cap: −25%</p><button class="button button--ghost">Details</button></article>
+        </div>
+        <article class="card card--table">
+          <div class="card__header"><p class="eyebrow">Row C — Table view</p><h3>Assets Table</h3></div>
+          <table>
+            <thead><tr><th>Asset</th><th>Group</th><th>Rated kW</th><th>Writable</th><th>Last Adjusted</th><th>Notes</th></tr></thead>
+            <tbody id="assetTable"></tbody>
+          </table>
+        </article>
+      </section>
+
+      <section id="data" class="page" aria-label="Data Explorer">
+        <header class="page__header">
+          <p class="breadcrumb">Data Explorer</p>
+          <h1>Data Explorer — AMI &amp; EMS</h1>
+        </header>
+        <div class="tabs">
+          <button class="chip chip--active">AMI (15-min)</button>
+          <button class="chip">EMS Points</button>
+        </div>
+        <div class="grid">
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">AMI Data</p><h3>Samples</h3></div>
+            <div class="chip-row"><button class="chip">Date</button><button class="chip">Hour</button><button class="chip">ToD Block</button><button class="chip">Export CSV</button></div>
+            <table>
+              <thead><tr><th>Timestamp</th><th>kW</th><th>kWh</th><th>Outdoor Temp °C</th><th>ToD</th><th>Weekday</th></tr></thead>
+              <tbody id="amiTable"></tbody>
+            </table>
+            <div class="chart chart--spark"></div>
+          </article>
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">EMS Data</p><h3>Points</h3></div>
+            <div class="chip-row"><button class="chip">Asset</button><button class="chip">Point</button><button class="chip">Unit</button><button class="chip">Download</button></div>
+            <table>
+              <thead><tr><th>Timestamp</th><th>Asset</th><th>Point</th><th>Value</th><th>Unit</th></tr></thead>
+              <tbody id="emsTable"></tbody>
+            </table>
+            <p class="microcopy">No data for the selected range.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="audit" class="page" aria-label="Audit & Security">
+        <header class="page__header">
+          <p class="breadcrumb">Audit &amp; Security</p>
+          <h1>Audit &amp; Security — Maker/Checker</h1>
+        </header>
+        <div class="tabs"><button class="chip chip--active">Action Log</button><button class="chip">Approvals</button><button class="chip">Access</button></div>
+        <article class="card card--table">
+          <div class="card__header"><p class="eyebrow">Action Log</p></div>
+          <table>
+            <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Target</th><th>Payload</th><th>Outcome</th></tr></thead>
+            <tbody id="auditTable"></tbody>
+          </table>
+        </article>
+        <article class="card card--table">
+          <div class="card__header"><p class="eyebrow">Approvals</p></div>
+          <p class="microcopy">EVT-2025-12-01-1800 awaiting commit approval</p>
+          <div class="button-group"><button class="button">Approve</button><button class="button button--ghost">Reject</button><button class="button button--ghost">View diff</button></div>
+        </article>
+        <article class="card card--table">
+          <div class="card__header"><p class="eyebrow">Access</p></div>
+          <table>
+            <thead><tr><th>User</th><th>Role</th><th>2FA</th><th>Last login</th><th>Sites</th></tr></thead>
+            <tbody id="accessTable"></tbody>
+          </table>
+          <button class="button">Invite User</button>
+        </article>
+      </section>
+
+      <section id="settings" class="page" aria-label="Settings">
+        <header class="page__header">
+          <p class="breadcrumb">Settings</p>
+          <h1>Settings — Site &amp; Policies</h1>
+        </header>
+        <div class="tabs">
+          <button class="chip chip--active">Site &amp; Tariff</button>
+          <button class="chip">EMS Connector</button>
+          <button class="chip">Policies &amp; Guardrails</button>
+          <button class="chip">Users &amp; Roles</button>
+          <button class="chip">Notifications</button>
+          <button class="chip">Branding</button>
+        </div>
+        <div class="grid">
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">Site &amp; Tariff</p></div>
+            <p class="metric">Contract Demand (1.7 MW)</p>
+            <p class="metric">ToD Blocks editor</p>
+          </article>
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">EMS Connector</p></div>
+            <p class="metric">Endpoint • Credentials • Writable whitelist • Test connection</p>
+          </article>
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">Policies &amp; Guardrails</p></div>
+            <ul class="stat-list">
+              <li>CHW Δ max +1.0°C</li>
+              <li>AHU SAT Δ max +1.0°C</li>
+              <li>VFD cap min −12%</li>
+              <li>Lighting min −25%</li>
+              <li>Max event 60m</li>
+              <li>Min rest 30m</li>
+            </ul>
+          </article>
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">Users &amp; Roles</p></div>
+            <p class="metric">Admin • Operator • Analyst • Viewer</p>
+          </article>
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">Notifications</p></div>
+            <p class="metric">Email • SMS • WhatsApp (templates editable)</p>
+          </article>
+          <article class="card card--table">
+            <div class="card__header"><p class="eyebrow">Branding</p></div>
+            <p class="metric">Upload logo • theme color</p>
+          </article>
+        </div>
+        <div class="save-bar"><button class="button button--ghost">Discard</button><button class="button">Save Changes</button></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <footer class="footer">
+    <h3>About this platform</h3>
+    <p>“AI/ML-driven C&amp;I ADR via AMI + EMS. Forecast peaks, target the right zones, dispatch safe set-point trims through your existing EMS, and verify reductions with audit-ready M&amp;V. No new hardware.”</p>
+    <p>Keyboard shortcuts: G O Overview • G F Forecast • G X Flex • G D Dispatch • G M M&amp;V • S Stage (on Dispatch) • C Commit (after staged) • R Rollback (if allowed)</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
