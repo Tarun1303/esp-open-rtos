@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MQTT Energy Simulator Config</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Arial, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 1.5rem;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 1rem 1.25rem;
+        max-width: 760px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      }
+      label {
+        display: block;
+        margin: 0.6rem 0 0.2rem;
+        font-weight: 600;
+      }
+      input[type="text"],
+      input[type="number"],
+      input[type="password"] {
+        width: 100%;
+        padding: 0.5rem 0.6rem;
+        border-radius: 6px;
+        border: 1px solid #475569;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem 1rem;
+      }
+      .intervals {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.4rem 0.6rem;
+        background: #0ea5e9;
+        color: #0f172a;
+        border-radius: 20px;
+        font-weight: 700;
+      }
+      button {
+        padding: 0.65rem 1rem;
+        border-radius: 8px;
+        border: none;
+        font-weight: 700;
+        cursor: pointer;
+        color: #0f172a;
+        background: #22c55e;
+      }
+      button.secondary {
+        background: #f97316;
+        color: #0f172a;
+      }
+      .actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+      }
+      .status {
+        margin-top: 1rem;
+        font-weight: 700;
+      }
+      .note {
+        margin-top: 0.4rem;
+        color: #cbd5e1;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Energy Meter MQTT Simulator</h1>
+      <p class="note">
+        Configure your broker connection, topic, publish intervals, and contracted demand.
+        Click <strong>Start simulator</strong> to begin publishing random yet sensible data to MQTT.
+      </p>
+      <div class="grid">
+        <div>
+          <label for="host">Broker host</label>
+          <input id="host" type="text" required />
+        </div>
+        <div>
+          <label for="port">Broker port</label>
+          <input id="port" type="number" min="1" max="65535" required />
+        </div>
+        <div>
+          <label for="topic">Topic</label>
+          <input id="topic" type="text" required />
+        </div>
+        <div>
+          <label for="username">Username (optional)</label>
+          <input id="username" type="text" />
+        </div>
+        <div>
+          <label for="password">Password (optional)</label>
+          <input id="password" type="password" />
+        </div>
+        <div>
+          <label for="base_kw">Contract demand (kW)</label>
+          <input id="base_kw" type="number" min="1" step="0.1" />
+        </div>
+        <div>
+          <label for="base_pf">Power factor</label>
+          <input id="base_pf" type="number" min="0" max="1" step="0.01" />
+        </div>
+      </div>
+
+      <label style="margin-top: 1rem">Publish intervals</label>
+      <div class="intervals" id="intervals"></div>
+
+      <div class="actions">
+        <button id="start">Start simulator</button>
+        <button class="secondary" id="stop">Stop simulator</button>
+      </div>
+      <div class="status" id="status">Status: Unknown</div>
+    </div>
+
+    <script>
+      const defaultIntervals = [1, 60, 300, 900];
+
+      function renderIntervals(values) {
+        const container = document.getElementById("intervals");
+        container.innerHTML = "";
+        values.forEach((val) => {
+          const label = document.createElement("label");
+          label.className = "chip";
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.value = val;
+          input.checked = true;
+          label.appendChild(input);
+          label.append(`${val}s`);
+          container.appendChild(label);
+        });
+      }
+
+      async function loadDefaults() {
+        const resp = await fetch("/api/status");
+        const data = await resp.json();
+        document.getElementById("host").value = data.host ?? "localhost";
+        document.getElementById("port").value = data.port ?? 1883;
+        document.getElementById("topic").value = data.topic ?? "Limelightit/adr/device1/energydata";
+        document.getElementById("username").value = data.username ?? "";
+        document.getElementById("password").value = "";
+        document.getElementById("base_kw").value = data.base_kw ?? 1500;
+        document.getElementById("base_pf").value = data.base_pf ?? 0.94;
+        renderIntervals(data.default_intervals ?? defaultIntervals);
+        updateStatus(data.running);
+      }
+
+      function selectedIntervals() {
+        return Array.from(document.querySelectorAll("#intervals input:checked"))
+          .map((el) => Number(el.value))
+          .filter((val) => val > 0);
+      }
+
+      function updateStatus(isRunning) {
+        const status = document.getElementById("status");
+        status.textContent = isRunning
+          ? "Status: Publishing"
+          : "Status: Stopped";
+      }
+
+      async function startSimulator() {
+        const body = {
+          host: document.getElementById("host").value,
+          port: Number(document.getElementById("port").value),
+          topic: document.getElementById("topic").value,
+          username: document.getElementById("username").value || null,
+          password: document.getElementById("password").value || null,
+          base_kw: Number(document.getElementById("base_kw").value),
+          base_pf: Number(document.getElementById("base_pf").value),
+          intervals: selectedIntervals(),
+        };
+        await fetch("/api/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        updateStatus(true);
+      }
+
+      async function stopSimulator() {
+        await fetch("/api/stop", { method: "POST" });
+        updateStatus(false);
+      }
+
+      document.getElementById("start").addEventListener("click", startSimulator);
+      document.getElementById("stop").addEventListener("click", stopSimulator);
+
+      loadDefaults();
+    </script>
+  </body>
+</html>
