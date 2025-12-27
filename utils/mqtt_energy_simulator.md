@@ -87,6 +87,11 @@ Launch the UI on port 5000 (default) and open it in your browser:
 python utils/mqtt_energy_simulator.py --serve-ui --host localhost --port 1883
 ```
 
+If you are working inside a container, keep the process running and browse to
+`http://127.0.0.1:5000` (or the forwarded port) to preview the page. The UI
+uses `/api/status` to load defaults and will stay on the status screen until
+you click **Start simulator**.
+
 From the UI you can:
 
 - Set the broker host/port and MQTT credentials.
