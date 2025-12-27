@@ -14,6 +14,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List
 
 import paho.mqtt.client as mqtt
@@ -82,6 +83,7 @@ class EnergyMeterSimulator:
     password: str | None = None
     base_kw: float = 1500.0
     base_pf: float = 0.94
+    intervals: List[int] = field(default_factory=lambda: [1, 60, 300, 900])
     running: bool = field(default=False, init=False)
     energy_kwh: float = field(default=0.0, init=False)
     demand_kw: float = field(default=0.0, init=False)
@@ -109,7 +111,8 @@ class EnergyMeterSimulator:
             900: "15min",
         }
 
-        for seconds, label in interval_labels.items():
+        for seconds in self.intervals:
+            label = interval_labels.get(seconds, f"{seconds}s")
             thread = threading.Thread(
                 target=self._publish_loop,
                 args=(seconds, label),
@@ -132,6 +135,11 @@ class EnergyMeterSimulator:
             payload = json.dumps(snapshot.to_payload())
             self.client.publish(self.topic, payload)
             time.sleep(interval_seconds)
+
+    def stop(self) -> None:
+        """Signal the simulator to halt all publishing threads."""
+
+        self.running = False
 
     def _generate_snapshot(self, interval_seconds: int, label: str) -> EnergySnapshot:
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -217,11 +225,51 @@ def parse_args() -> argparse.Namespace:
         default=0.94,
         help="Nominal power factor to model",
     )
+    parser.add_argument(
+        "--intervals",
+        default="1,60,300,900",
+        help="Comma-separated publish intervals in seconds",
+    )
+    parser.add_argument(
+        "--serve-ui",
+        action="store_true",
+        help="Launch a small web UI to configure and start the simulator",
+    )
+    parser.add_argument(
+        "--ui-host",
+        default="0.0.0.0",
+        help="Host interface for the configuration UI",
+    )
+    parser.add_argument(
+        "--ui-port",
+        type=int,
+        default=5000,
+        help="Port for the configuration UI",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    intervals = [
+        interval
+        for interval in {int(value.strip()) for value in args.intervals.split(",")}
+        if interval > 0
+    ]
+
+    if args.serve_ui:
+        run_web_ui(
+            ui_host=args.ui_host,
+            ui_port=args.ui_port,
+            default_host=args.host,
+            default_port=args.port,
+            default_topic=args.topic,
+            default_intervals=sorted(intervals),
+            default_base_kw=args.base_kw,
+            default_base_pf=args.base_pf,
+        )
+        return
+
     simulator = EnergyMeterSimulator(
         host=args.host,
         port=args.port,
@@ -230,9 +278,118 @@ def main() -> None:
         password=args.password,
         base_kw=args.base_kw,
         base_pf=args.base_pf,
+        intervals=sorted(intervals),
     )
     simulator.connect()
     simulator.start()
+
+
+def run_web_ui(
+    *,
+    ui_host: str,
+    ui_port: int,
+    default_host: str,
+    default_port: int,
+    default_topic: str,
+    default_intervals: List[int],
+    default_base_kw: float,
+    default_base_pf: float,
+) -> None:
+    from flask import Flask, jsonify, request, send_from_directory
+
+    app = Flask(__name__)
+    state: Dict[str, object | None] = {
+        "simulator": None,
+        "thread": None,
+        "defaults": {
+            "host": default_host,
+            "port": default_port,
+            "topic": default_topic,
+            "intervals": default_intervals,
+            "base_kw": default_base_kw,
+            "base_pf": default_base_pf,
+        },
+    }
+
+    def stop_simulator() -> None:
+        simulator: EnergyMeterSimulator | None = state.get("simulator")  # type: ignore[assignment]
+        thread: threading.Thread | None = state.get("thread")  # type: ignore[assignment]
+        if simulator:
+            simulator.stop()
+        if thread and thread.is_alive():
+            thread.join(timeout=1)
+        state["simulator"] = None
+        state["thread"] = None
+
+    @app.route("/")
+    def index() -> object:
+        return send_from_directory(
+            directory=str(Path(__file__).parent),
+            path="mqtt_energy_simulator_ui.html",
+        )
+
+    @app.route("/api/start", methods=["POST"])
+    def start_simulator() -> object:
+        payload = request.get_json(force=True)
+        stop_simulator()
+
+        intervals = [
+            interval
+            for interval in {int(value) for value in payload.get("intervals", [])}
+            if interval > 0
+        ]
+
+        simulator = EnergyMeterSimulator(
+            host=payload.get("host", default_host),
+            port=int(payload.get("port", default_port)),
+            topic=payload.get("topic", default_topic),
+            username=payload.get("username"),
+            password=payload.get("password"),
+            base_kw=float(payload.get("base_kw", default_base_kw)),
+            base_pf=float(payload.get("base_pf", default_base_pf)),
+            intervals=sorted(intervals) or default_intervals,
+        )
+
+        def runner() -> None:
+            simulator.connect()
+            simulator.start()
+
+        thread = threading.Thread(target=runner, daemon=True)
+        thread.start()
+        state["simulator"] = simulator
+        state["thread"] = thread
+        return jsonify({"status": "started"})
+
+    @app.route("/api/stop", methods=["POST"])
+    def api_stop() -> object:
+        stop_simulator()
+        return jsonify({"status": "stopped"})
+
+    @app.route("/api/status")
+    def status() -> object:
+        simulator: EnergyMeterSimulator | None = state.get("simulator")  # type: ignore[assignment]
+        running = bool(simulator and simulator.running)
+        defaults = state.get("defaults", {})
+        return jsonify(
+            {
+                "running": running,
+                "topic": simulator.topic if simulator else None,
+                "intervals": simulator.intervals if simulator else None,
+                "base_kw": simulator.base_kw if simulator else None,
+                "base_pf": simulator.base_pf if simulator else None,
+                "host": simulator.host if simulator else defaults.get("host"),
+                "port": simulator.port if simulator else defaults.get("port"),
+                "username": simulator.username if simulator else None,
+                "default_intervals": defaults.get("intervals"),
+                "default_base_kw": defaults.get("base_kw"),
+                "default_base_pf": defaults.get("base_pf"),
+            }
+        )
+
+    try:
+        app.run(host=ui_host, port=ui_port)
+    finally:
+        stop_simulator()
 
 
 if __name__ == "__main__":

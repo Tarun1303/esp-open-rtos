@@ -7,10 +7,12 @@ and cumulative energy.
 
 ## Requirements
 
-Install the single dependency before running the simulator:
+Install the dependencies before running the simulator:
 
 ```bash
 pip install paho-mqtt
+# Optional for the browser configuration UI
+pip install flask
 ```
 
 ## Usage
@@ -32,6 +34,10 @@ Arguments:
 - `--username` / `--password`: Optional MQTT credentials.
 - `--base-kw`: Nominal contracted demand to simulate (default `1500`).
 - `--base-pf`: Nominal power factor (default `0.94`).
+- `--intervals`: Comma-separated publish intervals in seconds (defaults to
+  `1,60,300,900`).
+- `--serve-ui`: Launch a small browser UI to configure broker/topic/intervals
+  and start/stop publishing without the command line.
 
 The script stays running and emits JSON such as:
 
@@ -72,3 +78,19 @@ The script stays running and emits JSON such as:
 ```
 
 Press `Ctrl+C` to stop publishing.
+
+## Browser configuration UI
+
+Launch the UI on port 5000 (default) and open it in your browser:
+
+```bash
+python utils/mqtt_energy_simulator.py --serve-ui --host localhost --port 1883
+```
+
+From the UI you can:
+
+- Set the broker host/port and MQTT credentials.
+- Choose the publish topic and any combination of 1s/1m/5m/15m (or custom)
+  intervals.
+- Set the contracted demand (kW) and power factor used to generate data.
+- Start or stop the simulator, with the current status shown on the page.
