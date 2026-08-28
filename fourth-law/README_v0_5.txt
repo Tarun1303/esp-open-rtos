@@ -1,0 +1,1 @@
+Fourth Law v0.5: one supervisor, four fixed logical role agents, shared OpenAI API key, browser control room, human decision inbox, and GitHub bidirectional bridge. Agents are logically always ready but do not keep paid API calls open while idle.
