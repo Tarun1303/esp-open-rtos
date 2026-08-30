@@ -27,8 +27,6 @@ from pathlib import Path
 p=Path('/opt/fourth-law-agent/app/control_room.py')
 s=p.read_text()
 
-# 1) Control Room ingress must unwrap a pasted bridge command instead of feeding the
-# entire CHATGPT_COMMAND JSON blob to the Supervisor as literal mission text.
 if 'def _normalize_task_submission(' not in s:
     anchor='def configure_control_room(start_task: Callable[[str, str, BackgroundTasks], Awaitable[dict]]) -> None:\n'
     if anchor not in s:
@@ -53,7 +51,6 @@ if 'def _normalize_task_submission(' not in s:
 '''
     s=s.replace(anchor,insert+anchor,1)
 
-# 2) A completed reasoning package is not the same thing as a deployed outcome.
 if 'def _delivery_state(' not in s:
     anchor='def _summary(job: dict, p: Path) -> dict:\n'
     if anchor not in s:
@@ -66,7 +63,7 @@ if 'def _delivery_state(' not in s:
         return "working"
     if job.get("deployment_verified") is True or str(job.get("deployment_state", "")).lower() == "verified":
         return "deployed_verified"
-    text = (str(job.get("goal", "")) + "\n" + str(job.get("context", ""))).lower()
+    text = (str(job.get("goal", "")) + " | " + str(job.get("context", ""))).lower()
     artifact_markers = (
         "implementation package", "patch package", "handoff", "implementation-ready",
         "implementation ready", "deployable package", "deployment package",
@@ -85,8 +82,6 @@ if 'def _delivery_state(' not in s:
 '''
     s=s.replace(anchor,insert+anchor,1)
 
-# 3) Expose truthful delivery state to the browser and avoid displaying artifact-only
-# completion as if the user's requested real-world outcome is complete.
 old="""        'architecture': job.get('architecture', ''), 'status': job.get('status', 'queued'), 'stage': _stage(job.get('status', 'queued')),
 """
 new="""        'architecture': job.get('architecture', ''), 'status': job.get('status', 'queued'),
@@ -110,7 +105,6 @@ if "'delivery_state': _delivery_state(job), 'architecture'" not in s:
         raise SystemExit('v0.9.8 summary delivery anchor missing')
     s=s.replace(old,new,1)
 
-# 4) Parse the browser mission correctly.
 old='''    return await _start_task(req.goal, req.context, background_tasks)
 '''
 new='''    goal, context = _normalize_task_submission(req.goal, req.context)
@@ -121,9 +115,6 @@ if '_normalize_task_submission(req.goal, req.context)' not in s:
         raise SystemExit('v0.9.8 submit task anchor missing')
     s=s.replace(old,new,1)
 
-# 5) After a process restart, in-memory background tasks do not survive. Any job that
-# was marked active before import is therefore orphaned and must not remain "running".
-# Reconcile these files once at process start so state/UI are truthful.
 if 'def _reconcile_orphaned_jobs(' not in s:
     anchor="@router.get('/control-room', response_class=HTMLResponse)\n"
     if anchor not in s:
@@ -158,7 +149,6 @@ p.write_text(s)
 
 p=Path('/opt/fourth-law-agent/app/main.py')
 s=p.read_text()
-# Health/current-version markers.
 s=s.replace('version="0.9.7"','version="0.9.8"')
 s=s.replace('"version":"0.9.7"','"version":"0.9.8"')
 s=s.replace('"version": "0.8.0"','"version": "0.9.8"')
@@ -168,8 +158,6 @@ if 'truthful-orchestration-v0.9.8' not in s:
     if marker not in s:
         raise SystemExit('v0.9.8 architecture marker missing')
     s=s.replace(marker,marker+'+truthful-orchestration-v0.9.8',1)
-# Where legacy state metadata hard-codes the historical budget, expose the governed
-# intelligence budget rather than claiming 85 active capacity.
 s=s.replace('"max_agents": 85', '"max_agents": INTELLIGENCE_AGENT_BUDGET')
 p.write_text(s)
 PY
@@ -200,7 +188,6 @@ done
 [[ "$ok" = 1 ]]
 curl -fsS http://127.0.0.1:8787/control-room >/dev/null
 
-# Verify stale active jobs were reconciled and the task normalizer works locally.
 docker compose exec -T agent python - <<'PY'
 from app.control_room import _normalize_task_submission, _delivery_state
 raw='CHATGPT_COMMAND {"id":"x","type":"intelligence_problem","goal":"Build the UI","context":"deploy after verification"}'
