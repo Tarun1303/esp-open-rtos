@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07090d">
+  <title>Fourth Law · Coding Workspace</title>
+  <style>
+    :root{
+      color-scheme:dark;--bg:#07090d;--panel:#0b0e14;--panel2:#10151d;--raised:#151b25;
+      --line:#202938;--line2:#2b384b;--text:#f1f5fb;--muted:#8a97aa;--dim:#5e6979;
+      --blue:#70d7ff;--blue2:#163a4d;--green:#63e6b0;--amber:#f6c86a;--red:#ff8f88;
+      --violet:#b8a7ff;--shadow:0 24px 80px rgba(0,0,0,.38);--sidebar:288px;--inspector:296px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;overflow:hidden;background:var(--bg);color:var(--text);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,input,textarea{font:inherit}
+    button,a{touch-action:manipulation}
+    button{color:inherit}
+    .app{height:100dvh;display:grid;grid-template-columns:var(--sidebar) minmax(360px,1fr) var(--inspector);background:radial-gradient(700px 420px at 58% -12%,rgba(47,119,165,.14),transparent 68%),var(--bg)}
+    .sidebar,.inspector{background:rgba(10,13,19,.92);min-width:0}
+    .sidebar{border-right:1px solid var(--line);display:flex;flex-direction:column}
+    .inspector{border-left:1px solid var(--line);overflow:auto}
+    .brand{height:68px;padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px}
+    .mark{width:33px;height:33px;border:1px solid #315a70;border-radius:10px;display:grid;place-items:center;background:linear-gradient(145deg,#163849,#0d1721);color:var(--blue);font-weight:800;box-shadow:inset 0 0 18px rgba(112,215,255,.08)}
+    .brand b{display:block;font-size:12px;letter-spacing:.13em}
+    .brand span{display:block;margin-top:2px;color:var(--muted);font-size:10px}
+    .sidebar-actions{padding:14px 14px 9px}
+    .primary{width:100%;height:42px;border:1px solid #2b566d;border-radius:11px;background:linear-gradient(180deg,#17394b,#102c3a);display:flex;align-items:center;justify-content:space-between;padding:0 13px;cursor:pointer;font-weight:650}
+    .primary:hover{border-color:#4383a2;background:#193f52}
+    .key{font-size:10px;color:#9cb4c2;border:1px solid rgba(255,255,255,.12);border-bottom-color:rgba(255,255,255,.22);padding:2px 5px;border-radius:5px;background:rgba(0,0,0,.18);font-weight:500}
+    .search-wrap{position:relative;margin-top:10px}
+    .search-wrap svg{position:absolute;left:11px;top:11px;color:var(--muted)}
+    .search{width:100%;height:38px;padding:0 42px 0 34px;border:1px solid var(--line);border-radius:10px;background:#0c1118;color:var(--text);outline:none}
+    .search:focus{border-color:#385e72;box-shadow:0 0 0 3px rgba(90,185,228,.08)}
+    .search-wrap .key{position:absolute;right:8px;top:9px}
+    .filters{display:flex;gap:4px;padding:0 14px 11px}
+    .filter{flex:1;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:11px;padding:7px 5px;cursor:pointer}
+    .filter:hover{color:var(--text);background:#111722}
+    .filter.active{color:var(--text);background:#171e29}
+    .thread-list{flex:1;overflow:auto;padding:0 8px 12px}
+    .thread{width:100%;border:1px solid transparent;border-radius:11px;background:transparent;text-align:left;padding:10px 10px 10px 12px;cursor:pointer;margin:2px 0;display:grid;grid-template-columns:9px 1fr;gap:9px}
+    .thread:hover{background:#10151d}
+    .thread.active{background:#131b26;border-color:#26364a}
+    .dot{width:7px;height:7px;margin-top:5px;border-radius:50%;background:var(--dim);box-shadow:0 0 0 3px rgba(94,105,121,.08)}
+    .dot.working,.dot.starting{background:var(--blue);box-shadow:0 0 0 3px rgba(112,215,255,.09),0 0 10px rgba(112,215,255,.5)}
+    .dot.complete,.dot.completed{background:var(--green)}
+    .dot.failed,.dot.disconnected{background:var(--red)}
+    .thread-title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;font-weight:620}
+    .thread-meta{margin-top:4px;display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:10px}
+    .empty-list{padding:26px 16px;text-align:center;color:var(--muted);font-size:11px}
+    .sidebar-foot{border-top:1px solid var(--line);padding:10px}
+    .nav-link{width:100%;height:36px;color:var(--muted);text-decoration:none;display:flex;align-items:center;justify-content:space-between;padding:0 9px;border-radius:8px;font-size:11px}
+    .nav-link:hover{background:#111720;color:var(--text)}
+
+    .workspace{min-width:0;display:flex;flex-direction:column}
+    .topbar{height:68px;flex:0 0 auto;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;gap:12px;background:rgba(8,11,16,.76);backdrop-filter:blur(12px)}
+    .mobile-menu{display:none;border:1px solid var(--line);background:#111720;border-radius:8px;width:36px;height:36px;cursor:pointer}
+    .heading{min-width:0}
+    .heading-row{display:flex;align-items:center;gap:8px;min-width:0}
+    #sessionTitle{font-size:14px;font-weight:680;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .status-pill,.scope-pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:3px 7px;color:var(--muted);font-size:9px;letter-spacing:.04em;white-space:nowrap}
+    .status-pill.working,.status-pill.starting{color:var(--blue);border-color:#24516a;background:#0d2330}
+    .status-pill.complete,.status-pill.completed{color:var(--green);border-color:#225542;background:#0e261e}
+    .status-pill.failed,.status-pill.disconnected{color:var(--red);border-color:#623832;background:#291816}
+    .heading-sub{color:var(--muted);font-size:10px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .top-actions{display:flex;gap:6px;align-items:center}
+    .btn{height:34px;border:1px solid var(--line);border-radius:9px;background:#111720;padding:0 10px;color:var(--muted);cursor:pointer;font-size:11px}
+    .btn:hover:not(:disabled){color:var(--text);border-color:var(--line2);background:#171f2a}
+    .btn:disabled{opacity:.38;cursor:not-allowed}
+    .btn.danger{color:#ffb0aa}
+    .btn.primary-small{color:#dff7ff;border-color:#2a566c;background:#123143}
+    .icon-btn{width:34px;padding:0}
+    .tabs{height:45px;flex:0 0 auto;border-bottom:1px solid var(--line);display:flex;gap:2px;padding:0 18px;align-items:end;background:rgba(9,12,17,.58)}
+    .tab{height:44px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:0 12px;cursor:pointer;font-size:11px}
+    .tab:hover{color:var(--text)}
+    .tab.active{border-bottom-color:var(--blue);color:var(--text)}
+    .count{margin-left:5px;border-radius:99px;background:#18212d;color:var(--muted);padding:1px 5px;font-size:9px}
+    .view-stack{flex:1;min-height:0;position:relative}
+    .view{display:none;height:100%;overflow:auto}
+    .view.active{display:block}
+    .conversation{padding:28px max(20px,calc((100% - 860px)/2)) 24px;scroll-behavior:smooth}
+    .welcome{max-width:680px;margin:11vh auto 0}
+    .eyebrow{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--blue)}
+    .welcome h1{font-size:28px;line-height:1.15;letter-spacing:-.035em;margin:10px 0}
+    .welcome p{color:var(--muted);max-width:580px;line-height:1.65}
+    .onboarding-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:22px}
+    .onboard-card{border:1px solid var(--line);border-radius:12px;background:#0d1219;padding:13px}
+    .onboard-card b{font-size:11px}
+    .onboard-card p{font-size:10px;margin:4px 0 0;color:var(--muted);line-height:1.5}
+    .message{max-width:780px;margin:0 0 20px}
+    .message.user{margin-left:auto;max-width:690px}
+    .message-head{display:flex;align-items:center;gap:8px;margin:0 0 7px;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.11em}
+    .message.user .message-head{justify-content:flex-end}
+    .bubble{border:1px solid var(--line);border-radius:14px;background:#0e131b;padding:15px 16px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.62;font-size:13px}
+    .message.user .bubble{background:#132334;border-color:#254057}
+    .message.final .bubble{border-color:#285345;background:linear-gradient(145deg,#0d1b18,#0d1518)}
+    .final-tag{color:var(--green)}
+    .working-card{display:flex;align-items:center;gap:10px;border:1px dashed #294357;border-radius:12px;padding:12px 14px;color:var(--muted);font-size:11px;background:#0b1219}
+    .pulse{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:pulse 1.6s infinite}
+    @keyframes pulse{50%{opacity:.35;transform:scale(.75)}}
+    .panel-content{padding:24px max(18px,calc((100% - 900px)/2));min-height:100%}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .section-head h2{font-size:14px;margin:0}
+    .section-head span{color:var(--muted);font-size:10px}
+    .blank{border:1px dashed var(--line2);border-radius:14px;color:var(--muted);padding:46px 20px;text-align:center;font-size:11px}
+    .plan-list{display:flex;flex-direction:column;gap:8px}
+    .plan-item{border:1px solid var(--line);border-radius:11px;background:#0d1219;padding:12px 13px;display:grid;grid-template-columns:18px 1fr;gap:9px}
+    .plan-icon{width:17px;height:17px;border:1px solid var(--line2);border-radius:50%;display:grid;place-items:center;color:var(--muted);font-size:9px}
+    .plan-item.completed .plan-icon{color:var(--green);border-color:#28634e}
+    .plan-item.in_progress .plan-icon{color:var(--blue);border-color:#315e74}
+    .plan-step{font-size:12px}
+    .plan-state{font-size:9px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.08em}
+    .diff-box{margin:0;min-height:300px;border:1px solid var(--line);border-radius:12px;background:#080b10;padding:16px;overflow:auto;color:#c9d4e2;font:11px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}
+    .timeline{position:relative;margin-left:5px}
+    .timeline:before{content:"";position:absolute;left:5px;top:8px;bottom:8px;width:1px;background:var(--line)}
+    .event{position:relative;display:grid;grid-template-columns:11px 1fr;gap:13px;padding:0 0 16px}
+    .event-dot{width:11px;height:11px;border-radius:50%;border:2px solid #0b0e14;background:#536173;margin-top:3px;z-index:1}
+    .event.command .event-dot,.event.file_change .event-dot{background:var(--violet)}
+    .event.turn_started .event-dot,.event.turn_requested .event-dot,.event.turn_steered .event-dot{background:var(--blue)}
+    .event.turn_completed .event-dot{background:var(--green)}
+    .event.error .event-dot,.event.request_failed .event-dot{background:var(--red)}
+    .event-summary{font-size:11px;overflow-wrap:anywhere}
+    .event-meta{font-size:9px;color:var(--muted);margin-top:3px}
+
+    .composer-shell{flex:0 0 auto;border-top:1px solid var(--line);background:rgba(9,12,17,.94);padding:11px max(17px,calc((100% - 900px)/2)) 15px}
+    .context-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;color:var(--muted);font-size:10px}
+    .context-state{display:flex;align-items:center;gap:6px}
+    .context-state strong{color:var(--blue);font-weight:600}
+    .quick-prompts{display:flex;gap:5px;overflow:auto;padding-bottom:7px;scrollbar-width:none}
+    .chip{flex:0 0 auto;border:1px solid var(--line);border-radius:999px;background:#0d131b;color:var(--muted);padding:5px 9px;cursor:pointer;font-size:9px}
+    .chip:hover{color:var(--text);border-color:var(--line2)}
+    .composer{border:1px solid var(--line2);border-radius:13px;background:#0c1118;padding:9px 9px 8px;box-shadow:0 12px 34px rgba(0,0,0,.16)}
+    .composer:focus-within{border-color:#37667d;box-shadow:0 0 0 3px rgba(77,174,219,.06)}
+    #prompt{display:block;width:100%;height:48px;max-height:170px;resize:none;border:0;outline:0;background:transparent;color:var(--text);padding:2px 4px;line-height:1.5;font-size:12px}
+    #prompt::placeholder{color:#657184}
+    .composer-foot{display:flex;align-items:center;justify-content:space-between;padding-top:6px}
+    .composer-hint{color:var(--dim);font-size:9px}
+    .send{height:30px;border:1px solid #36708c;border-radius:8px;background:#17435a;color:#ecfaff;padding:0 12px;cursor:pointer;font-size:10px;font-weight:650}
+    .send:hover{background:#1b4e68}.send:disabled{opacity:.38;cursor:not-allowed}
+
+    .inspector-head{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 16px;font-size:11px;font-weight:650;letter-spacing:.04em}
+    .inspect-section{padding:17px 16px;border-bottom:1px solid var(--line)}
+    .inspect-label{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+    .role-name{font-size:13px;font-weight:670}
+    .role-desc{font-size:10px;color:var(--muted);line-height:1.55;margin-top:5px}
+    .owned{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+    .owned span{font-size:9px;padding:3px 6px;border-radius:6px;background:#151d28;color:#a8b6c8;border:1px solid var(--line)}
+    .kv{display:grid;grid-template-columns:85px 1fr;gap:8px;margin:8px 0;font-size:10px}
+    .kv dt{color:var(--muted)}.kv dd{margin:0;text-align:right;overflow-wrap:anywhere}
+    .copy-value{cursor:pointer;color:var(--blue)}
+    .security{display:grid;gap:9px}
+    .security-row{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start}
+    .check{color:var(--green);font-size:11px}
+    .security-row b{font-size:10px;display:block}
+    .security-row span{font-size:9px;color:var(--muted);display:block;margin-top:2px}
+    .error-box{display:none;border:1px solid #633a35;background:#291a18;color:#ffb2ac;border-radius:9px;padding:9px;margin-top:10px;font-size:9px;overflow-wrap:anywhere}
+    .error-box.show{display:block}
+
+    .modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.74);backdrop-filter:blur(6px);display:none;place-items:center;padding:18px}
+    .modal.show{display:grid}
+    .modal-card{width:min(710px,96vw);max-height:92dvh;overflow:auto;background:#0c1118;border:1px solid var(--line2);border-radius:17px;box-shadow:var(--shadow)}
+    .modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--line);display:flex;align-items:start;justify-content:space-between}
+    .modal-head h2{font-size:16px;margin:0}.modal-head p{font-size:10px;color:var(--muted);margin:5px 0 0}
+    .close{border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer}
+    .modal-body{padding:16px 20px 20px}
+    .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .role-card{border:1px solid var(--line);border-radius:11px;background:#0f151d;text-align:left;padding:12px;cursor:pointer}
+    .role-card:hover{border-color:#355267}.role-card.selected{border-color:#3c7897;background:#112430;box-shadow:0 0 0 2px rgba(91,187,230,.07)}
+    .role-card b{font-size:11px}.role-card p{font-size:9px;color:var(--muted);line-height:1.5;margin:5px 0}.role-card span{font-size:9px;color:var(--blue)}
+    .field-label{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin:15px 0 6px}
+    #firstInstruction{width:100%;min-height:126px;resize:vertical;border:1px solid var(--line);border-radius:11px;background:#080c12;color:var(--text);outline:none;padding:12px;font-size:12px;line-height:1.5}
+    #firstInstruction:focus{border-color:#37667d}
+    .modal-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:12px}
+    .modal-error{min-height:16px;color:var(--red);font-size:9px;margin-top:6px}
+    .toast-area{position:fixed;right:18px;bottom:18px;z-index:30;display:flex;flex-direction:column;gap:7px}
+    .toast{min-width:210px;max-width:340px;border:1px solid var(--line2);border-radius:10px;background:#151c27;color:var(--text);box-shadow:var(--shadow);padding:10px 12px;font-size:10px;animation:slide .2s ease}
+    .toast.error{border-color:#633a35;color:#ffb2ac}
+    @keyframes slide{from{opacity:0;transform:translateY(6px)}}
+    .mobile-shade{display:none}
+
+    @media(max-width:1080px){
+      .app{grid-template-columns:250px minmax(360px,1fr)}
+      .inspector{display:none}
+    }
+    @media(max-width:760px){
+      .app{display:flex}
+      .sidebar{position:fixed;z-index:15;inset:0 auto 0 0;width:min(310px,86vw);transform:translateX(-102%);transition:transform .2s ease;box-shadow:var(--shadow)}
+      .sidebar.open{transform:none}
+      .mobile-shade{display:block;position:fixed;z-index:14;inset:0;background:#0009;opacity:0;pointer-events:none;transition:opacity .2s}
+      .mobile-shade.show{opacity:1;pointer-events:auto}
+      .workspace{width:100%}.mobile-menu{display:block}
+      .topbar{padding:0 11px}.scope-pill,.top-actions .secondary-action{display:none}
+      .tabs{padding:0 7px;overflow:auto}.tab{padding:0 9px}
+      .conversation{padding:22px 13px}.composer-shell{padding:10px}
+      .onboarding-grid,.role-grid{grid-template-columns:1fr}
+      .welcome{margin-top:5vh}.welcome h1{font-size:24px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="mark">IV</div><div><b>FOURTH LAW</b><span>Codex coding workspace</span></div></div>
+      <div class="sidebar-actions">
+        <button class="primary" id="newThread"><span>＋ New coding thread</span><span class="key">⌘⇧N</span></button>
+        <div class="search-wrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input class="search" id="search" placeholder="Search threads">
+          <span class="key">⌘K</span>
+        </div>
+      </div>
+      <div class="filters">
+        <button class="filter active" data-filter="open">Open</button>
+        <button class="filter" data-filter="active">Active</button>
+        <button class="filter" data-filter="archived">Archived</button>
+      </div>
+      <div class="thread-list" id="threadList"></div>
+      <div class="sidebar-foot">
+        <a class="nav-link" href="/control-room"><span>← Main Control Room</span><span>⌂</span></a>
+        <button class="nav-link" id="refresh" style="border:0;background:transparent;cursor:pointer"><span>Refresh workspace</span><span>↻</span></button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="Open thread navigation">☰</button>
+        <div class="heading">
+          <div class="heading-row">
+            <span id="sessionTitle">Coding workspace</span>
+            <span class="status-pill" id="statusPill">ready</span>
+            <span class="scope-pill">◇ Restricted worktree</span>
+          </div>
+          <div class="heading-sub" id="sessionSubtitle">Choose a thread or start a focused coding task</div>
+        </div>
+        <div class="top-actions">
+          <button class="btn secondary-action" id="renameBtn" disabled>Rename</button>
+          <button class="btn secondary-action" id="archiveBtn" disabled>Archive</button>
+          <button class="btn danger" id="stopBtn" disabled>Stop</button>
+        </div>
+      </header>
+      <nav class="tabs">
+        <button class="tab active" data-tab="conversation">Conversation <span class="count" id="messageCount">0</span></button>
+        <button class="tab" data-tab="plan">Plan <span class="count" id="planCount">0</span></button>
+        <button class="tab" data-tab="changes">Changes <span class="count" id="changeCount">0</span></button>
+        <button class="tab" data-tab="activity">Activity <span class="count" id="eventCount">0</span></button>
+      </nav>
+      <div class="view-stack">
+        <section class="view active conversation" id="conversationView"></section>
+        <section class="view" id="planView"><div class="panel-content" id="planContent"></div></section>
+        <section class="view" id="changesView"><div class="panel-content" id="changesContent"></div></section>
+        <section class="view" id="activityView"><div class="panel-content" id="activityContent"></div></section>
+      </div>
+      <footer class="composer-shell">
+        <div class="context-row">
+          <div class="context-state"><span class="dot" id="composerDot"></span><span id="composerState">Select a coding thread</span></div>
+          <span id="connectionState">Live updates ready</span>
+        </div>
+        <div class="quick-prompts">
+          <button class="chip" data-prompt="Make the smallest verified fix for this issue. Inspect first, implement it, and run the relevant checks.">Small verified fix</button>
+          <button class="chip" data-prompt="Review the relevant code first. Explain the likely cause and propose a concise implementation plan before editing.">Review first</button>
+          <button class="chip" data-prompt="Find and fix the failing tests in this workspace. Preserve intended behavior and verify the focused test suite.">Fix failing tests</button>
+          <button class="chip" data-prompt="Summarize the changes in this thread, the validation performed, and any remaining risks or next steps.">Summarize changes</button>
+        </div>
+        <div class="composer">
+          <textarea id="prompt" maxlength="24000" placeholder="Describe the change, constraints, and acceptance criteria…" disabled></textarea>
+          <div class="composer-foot"><span class="composer-hint"><span id="charCount">0</span>/24,000 · Enter to send · Shift+Enter for a new line</span><button class="send" id="sendBtn" disabled>Send ↗</button></div>
+        </div>
+      </footer>
+    </main>
+
+    <aside class="inspector">
+      <div class="inspector-head">Workspace details</div>
+      <section class="inspect-section">
+        <div class="inspect-label">Selected role</div>
+        <div class="role-name" id="roleName">No thread selected</div>
+        <div class="role-desc" id="roleDescription">Each role has a focused, isolated Git worktree.</div>
+        <div class="owned" id="roleOwned"></div>
+      </section>
+      <section class="inspect-section">
+        <div class="inspect-label">Thread</div>
+        <dl>
+          <div class="kv"><dt>Model</dt><dd id="modelValue">—</dd></div>
+          <div class="kv"><dt>Status</dt><dd id="statusValue">—</dd></div>
+          <div class="kv"><dt>Thread ID</dt><dd class="copy-value" id="threadId" title="Copy thread ID">—</dd></div>
+          <div class="kv"><dt>Updated</dt><dd id="updatedValue">—</dd></div>
+        </dl>
+        <div class="error-box" id="errorBox"></div>
+      </section>
+      <section class="inspect-section">
+        <div class="inspect-label">Security boundary</div>
+        <div class="security">
+          <div class="security-row"><span class="check">✓</span><div><b>Selected worktree only</b><span>Filesystem access is pinned to this role.</span></div></div>
+          <div class="security-row"><span class="check">✓</span><div><b>Command network denied</b><span>Shell commands cannot reach external networks.</span></div></div>
+          <div class="security-row"><span class="check">✓</span><div><b>Credentials denied</b><span>Secret and credential files remain unreadable.</span></div></div>
+          <div class="security-row"><span class="check">✓</span><div><b>Production writes disabled</b><span>Deployment stays behind the verified release gate.</span></div></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+  <div class="mobile-shade" id="mobileShade"></div>
+
+  <div class="modal" id="newModal" role="dialog" aria-modal="true" aria-labelledby="newTitle">
+    <div class="modal-card">
+      <div class="modal-head"><div><h2 id="newTitle">Start a coding thread</h2><p>Pick the worktree that owns the part of the system you want to change.</p></div><button class="close" id="closeModal" aria-label="Close">×</button></div>
+      <div class="modal-body">
+        <div class="role-grid" id="roleGrid"></div>
+        <label class="field-label" for="firstInstruction"><span>First instruction</span><span id="firstCount">0 / 24,000</span></label>
+        <textarea id="firstInstruction" maxlength="24000" placeholder="Describe the outcome, relevant context, and how Codex should verify the work…"></textarea>
+        <div class="modal-error" id="modalError"></div>
+        <div class="modal-actions"><button class="btn" id="cancelModal">Cancel</button><button class="btn primary-small" id="createBtn">Start thread</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="toast-area" id="toasts"></div>
+
+  <script>
+  (() => {
+    const state = {sessions:[], roles:[], current:null, source:null, filter:'open', query:'', tab:'conversation', selectedRole:'runtime', stickToBottom:true, reconnectTimer:null};
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const working = status => ['working','starting','interrupting'].includes(String(status || '').toLowerCase());
+    const statusClass = status => String(status || 'ready').toLowerCase().replace(/[^a-z_]/g,'');
+    const relativeTime = seconds => {
+      if (!seconds) return 'never';
+      const delta = Math.max(0, Date.now() / 1000 - seconds);
+      if (delta < 10) return 'now';
+      if (delta < 60) return Math.floor(delta) + 's ago';
+      if (delta < 3600) return Math.floor(delta / 60) + 'm ago';
+      if (delta < 86400) return Math.floor(delta / 3600) + 'h ago';
+      return new Date(seconds * 1000).toLocaleDateString();
+    };
+    const toast = (message, kind='') => {
+      const node = document.createElement('div');
+      node.className = 'toast ' + kind;
+      node.textContent = message;
+      $('toasts').appendChild(node);
+      setTimeout(() => node.remove(), 3600);
+    };
+    async function api(url, options={}) {
+      const response = await fetch(url, {...options, headers:{'Content-Type':'application/json', ...(options.headers || {})}});
+      let data = {};
+      try { data = await response.json(); } catch {}
+      if (response.status === 401) {
+        location.href = '/control-room';
+        throw new Error('Pair in the main Control Room first.');
+      }
+      if (!response.ok) throw new Error(data.detail || 'Request failed');
+      return data;
+    }
+    function roleFor(id) {
+      return state.roles.find(role => role.id === id) || state.current?.role_details || {};
+    }
+    function renderRoles() {
+      const roles = state.roles.length ? state.roles : [
+        {id:'runtime',label:'Runtime architecture',description:'Orchestration and agent lifecycle.',model:'gpt-5.6-terra'},
+        {id:'control-room',label:'Control Room',description:'Operator UI and realtime APIs.',model:'gpt-5.6-terra'},
+        {id:'execution',label:'Execution safety',description:'Validation, release gates and rollback.',model:'gpt-5.6-sol'},
+        {id:'efficiency',label:'Efficiency & memory',description:'Context, memory and request governance.',model:'gpt-5.6-terra'}
+      ];
+      if (!roles.some(role => role.id === state.selectedRole)) state.selectedRole = roles[0].id;
+      $('roleGrid').innerHTML = roles.map(role => `<button class="role-card ${role.id === state.selectedRole ? 'selected' : ''}" data-role="${esc(role.id)}"><b>${esc(role.label || role.id)}</b><p>${esc(role.description || '')}</p><span>${esc(role.model || '')}</span></button>`).join('');
+      $('roleGrid').querySelectorAll('[data-role]').forEach(node => node.addEventListener('click', () => {state.selectedRole = node.dataset.role; renderRoles();}));
+    }
+    function visibleSessions() {
+      return state.sessions.filter(session => {
+        const archiveMatch = state.filter === 'archived' ? session.archived : !session.archived;
+        const activeMatch = state.filter !== 'active' || working(session.status);
+        const textMatch = !state.query || [session.title, session.role, session.status].join(' ').toLowerCase().includes(state.query);
+        return archiveMatch && activeMatch && textMatch;
+      });
+    }
+    function renderThreads() {
+      const rows = visibleSessions();
+      $('threadList').innerHTML = rows.length ? rows.map(session => `
+        <button class="thread ${state.current?.id === session.id ? 'active' : ''}" data-session="${esc(session.id)}">
+          <span class="dot ${statusClass(session.status)}"></span>
+          <span><span class="thread-title">${esc(session.title || 'Untitled coding thread')}</span><span class="thread-meta"><span>${esc(roleFor(session.role).label || session.role)}</span><span>${relativeTime(session.updated_at)}</span></span></span>
+        </button>`).join('') : '<div class="empty-list">No threads match this view.<br>Start a new coding thread to begin.</div>';
+      $('threadList').querySelectorAll('[data-session]').forEach(node => node.addEventListener('click', () => openSession(node.dataset.session)));
+    }
+    function setStatus(status='ready') {
+      $('statusPill').textContent = status;
+      $('statusPill').className = 'status-pill ' + statusClass(status);
+    }
+    function welcome() {
+      $('conversationView').innerHTML = `<div class="welcome"><div class="eyebrow">Direct coding channel</div><h1>Turn an idea into a verified change.</h1><p>Start a persistent thread for the area you want to improve. Codex keeps the coding context, edits only that role's isolated worktree, and reports plans, diffs, and execution activity here.</p><div class="onboarding-grid"><div class="onboard-card"><b>1 · Choose ownership</b><p>Select Runtime, Control Room, Execution, or Efficiency.</p></div><div class="onboard-card"><b>2 · Define the outcome</b><p>Include constraints and acceptance criteria in plain language.</p></div><div class="onboard-card"><b>3 · Follow live work</b><p>Use Conversation, Plan, Changes, and Activity views.</p></div><div class="onboard-card"><b>4 · Continue naturally</b><p>Every message stays in the same persistent Codex thread.</p></div></div></div>`;
+    }
+    function renderConversation() {
+      if (!state.current) return welcome();
+      const messages = state.current.messages || [];
+      if (!messages.length && !working(state.current.status)) {
+        $('conversationView').innerHTML = '<div class="blank">This thread has no messages yet.</div>';
+        return;
+      }
+      $('conversationView').innerHTML = messages.map(message => {
+        const final = message.role === 'assistant' && message.phase === 'final';
+        return `<article class="message ${esc(message.role)} ${final ? 'final' : ''}"><div class="message-head"><span class="${final ? 'final-tag' : ''}">${message.role === 'user' ? 'You' : (final ? 'Codex · result' : 'Codex · working')}</span><span>·</span><span>${relativeTime(message.ts)}</span></div><div class="bubble">${esc(message.text)}</div></article>`;
+      }).join('') + (working(state.current.status) ? '<div class="working-card"><span class="pulse"></span><span>Codex is working. New instructions will steer the active turn.</span></div>' : '');
+      if (state.stickToBottom) $('conversationView').scrollTop = $('conversationView').scrollHeight;
+    }
+    function renderPlan() {
+      const plan = state.current?.plan || [];
+      $('planContent').innerHTML = `<div class="section-head"><h2>Execution plan</h2><span>${plan.length} step${plan.length === 1 ? '' : 's'}</span></div>` + (plan.length ? `<div class="plan-list">${plan.map((item, index) => {
+        const status = item.status || 'pending';
+        const icon = status === 'completed' ? '✓' : (status === 'in_progress' ? '•' : String(index + 1));
+        return `<div class="plan-item ${statusClass(status)}"><span class="plan-icon">${icon}</span><div><div class="plan-step">${esc(item.step || item.text || '')}</div><div class="plan-state">${esc(status.replace('_',' '))}</div></div></div>`;
+      }).join('')}</div>` : '<div class="blank">The structured plan will appear when Codex publishes one.</div>');
+    }
+    function renderChanges() {
+      const diff = state.current?.diff || '';
+      $('changesContent').innerHTML = `<div class="section-head"><h2>Workspace changes</h2><span>${diff ? diff.split('\n').length + ' lines' : 'No diff yet'}</span></div>` + (diff ? `<pre class="diff-box">${esc(diff)}</pre>` : '<div class="blank">File changes will appear here as a unified diff.</div>');
+    }
+    function renderActivity() {
+      const events = [...(state.current?.events || [])].reverse();
+      $('activityContent').innerHTML = `<div class="section-head"><h2>Live activity</h2><span>${events.length} event${events.length === 1 ? '' : 's'}</span></div>` + (events.length ? `<div class="timeline">${events.map(event => `<div class="event ${statusClass(event.type)}"><span class="event-dot"></span><div><div class="event-summary">${esc(event.summary || event.type)}</div><div class="event-meta">${esc(String(event.type || '').replaceAll('_',' '))} · ${new Date((event.ts || 0)*1000).toLocaleString()}</div></div></div>`).join('')}</div>` : '<div class="blank">Commands, file changes, plans, and turn events will appear here.</div>');
+    }
+    function renderInspector() {
+      const current = state.current;
+      const role = current ? roleFor(current.role) : {};
+      $('roleName').textContent = current ? (role.label || current.role) : 'No thread selected';
+      $('roleDescription').textContent = current ? (role.description || '') : 'Each role has a focused, isolated Git worktree.';
+      $('roleOwned').innerHTML = (role.owns || []).map(item => `<span>${esc(item)}</span>`).join('');
+      $('modelValue').textContent = current?.model || '—';
+      $('statusValue').textContent = current?.status || '—';
+      $('threadId').textContent = current?.thread_id || '—';
+      $('updatedValue').textContent = current ? relativeTime(current.updated_at) : '—';
+      $('errorBox').textContent = current?.last_error || '';
+      $('errorBox').classList.toggle('show', Boolean(current?.last_error));
+    }
+    function render() {
+      const current = state.current;
+      $('sessionTitle').textContent = current?.title || 'Coding workspace';
+      const role = current ? roleFor(current.role) : {};
+      $('sessionSubtitle').textContent = current ? `${role.label || current.role} · ${current.model} · persistent memory` : 'Choose a thread or start a focused coding task';
+      setStatus(current?.status || 'ready');
+      $('messageCount').textContent = current?.messages?.length || 0;
+      $('planCount').textContent = current?.plan?.length || 0;
+      $('changeCount').textContent = current?.diff ? '1' : '0';
+      $('eventCount').textContent = current?.events?.length || 0;
+      const isWorking = working(current?.status);
+      $('composerState').innerHTML = current ? (isWorking ? '<strong>Steering active turn</strong>' : '<strong>New turn</strong> · same persistent thread') : 'Select a coding thread';
+      $('composerDot').className = 'dot ' + statusClass(current?.status);
+      $('prompt').disabled = !current;
+      $('sendBtn').disabled = !current || !$('prompt').value.trim();
+      $('renameBtn').disabled = !current;
+      $('archiveBtn').disabled = !current;
+      $('archiveBtn').textContent = current?.archived ? 'Restore' : 'Archive';
+      $('stopBtn').disabled = !current || !isWorking;
+      renderThreads(); renderConversation(); renderPlan(); renderChanges(); renderActivity(); renderInspector();
+    }
+    async function refreshSessions() {
+      try {
+        const data = await api('/control-room/api/codex/sessions');
+        state.sessions = data.sessions || [];
+        state.roles = data.roles || [];
+        renderRoles(); renderThreads();
+        return data;
+      } catch (error) { toast(error.message, 'error'); throw error; }
+    }
+    function closeSource() {
+      if (state.source) state.source.close();
+      state.source = null;
+      clearTimeout(state.reconnectTimer);
+    }
+    function connectStream(id) {
+      closeSource();
+      $('connectionState').textContent = 'Connecting live updates…';
+      const source = new EventSource('/control-room/api/codex/stream/' + encodeURIComponent(id));
+      state.source = source;
+      source.addEventListener('snapshot', event => {
+        if (state.current?.id !== id) return;
+        state.current = JSON.parse(event.data);
+        $('connectionState').textContent = 'Live updates connected';
+        const index = state.sessions.findIndex(item => item.id === id);
+        if (index >= 0) state.sessions[index] = {...state.sessions[index], ...state.current};
+        render();
+      });
+      source.onerror = () => {
+        $('connectionState').textContent = 'Reconnecting live updates…';
+        source.close();
+        if (state.current?.id === id) state.reconnectTimer = setTimeout(() => connectStream(id), 1800);
+      };
+    }
+    async function openSession(id) {
+      closeMobile();
+      try {
+        state.current = await api('/control-room/api/codex/sessions/' + encodeURIComponent(id));
+        localStorage.setItem('fourthlaw.codex.lastSession', id);
+        state.stickToBottom = true;
+        render();
+        connectStream(id);
+      } catch (error) { toast(error.message, 'error'); }
+    }
+    function openModal() {
+      renderRoles();
+      $('modalError').textContent = '';
+      $('newModal').classList.add('show');
+      setTimeout(() => $('firstInstruction').focus(), 20);
+    }
+    function closeModal() { $('newModal').classList.remove('show'); }
+    async function createThread() {
+      const message = $('firstInstruction').value.trim();
+      if (message.length < 3) { $('modalError').textContent = 'Add a clear first instruction (at least 3 characters).'; return; }
+      $('createBtn').disabled = true;
+      $('createBtn').textContent = 'Starting…';
+      $('modalError').textContent = '';
+      try {
+        const session = await api('/control-room/api/codex/sessions', {method:'POST', body:JSON.stringify({role:state.selectedRole, message})});
+        $('firstInstruction').value = '';
+        $('firstCount').textContent = '0 / 24,000';
+        closeModal();
+        await refreshSessions();
+        await openSession(session.id);
+        toast('Coding thread started');
+      } catch (error) { $('modalError').textContent = error.message; }
+      finally { $('createBtn').disabled = false; $('createBtn').textContent = 'Start thread'; }
+    }
+    async function sendMessage() {
+      const message = $('prompt').value.trim();
+      if (!state.current || !message) return;
+      $('sendBtn').disabled = true;
+      try {
+        const result = await api('/control-room/api/codex/sessions/' + encodeURIComponent(state.current.id) + '/messages', {method:'POST', body:JSON.stringify({message})});
+        $('prompt').value = '';
+        $('charCount').textContent = '0';
+        autosize();
+        if (result.session) state.current = result.session;
+        state.stickToBottom = true;
+        render();
+        toast(result.action === 'steered' ? 'Instruction added to the active turn' : 'New turn started');
+      } catch (error) { toast(error.message, 'error'); }
+      finally { $('sendBtn').disabled = !$('prompt').value.trim(); }
+    }
+    async function interrupt() {
+      if (!state.current || !working(state.current.status)) return;
+      $('stopBtn').disabled = true;
+      try {
+        await api('/control-room/api/codex/sessions/' + encodeURIComponent(state.current.id) + '/interrupt', {method:'POST'});
+        toast('Stop requested');
+      } catch (error) { toast(error.message, 'error'); }
+    }
+    async function rename() {
+      if (!state.current) return;
+      const title = prompt('Name this coding thread', state.current.title || '');
+      if (title === null || !title.trim()) return;
+      try {
+        state.current = await api('/control-room/api/codex/sessions/' + encodeURIComponent(state.current.id), {method:'PATCH', body:JSON.stringify({title:title.trim()})});
+        await refreshSessions(); render(); toast('Thread renamed');
+      } catch (error) { toast(error.message, 'error'); }
+    }
+    async function toggleArchive() {
+      if (!state.current) return;
+      const archived = !state.current.archived;
+      try {
+        state.current = await api('/control-room/api/codex/sessions/' + encodeURIComponent(state.current.id), {method:'PATCH', body:JSON.stringify({archived})});
+        await refreshSessions(); render(); toast(archived ? 'Thread archived' : 'Thread restored');
+      } catch (error) { toast(error.message, 'error'); }
+    }
+    function autosize() {
+      const promptBox = $('prompt');
+      promptBox.style.height = '48px';
+      promptBox.style.height = Math.min(170, Math.max(48, promptBox.scrollHeight)) + 'px';
+    }
+    function chooseTab(tab) {
+      state.tab = tab;
+      document.querySelectorAll('.tab').forEach(node => node.classList.toggle('active', node.dataset.tab === tab));
+      document.querySelectorAll('.view').forEach(node => node.classList.remove('active'));
+      $(tab + 'View').classList.add('active');
+    }
+    function openMobile() {$('sidebar').classList.add('open'); $('mobileShade').classList.add('show');}
+    function closeMobile() {$('sidebar').classList.remove('open'); $('mobileShade').classList.remove('show');}
+    function bind() {
+      $('newThread').addEventListener('click', openModal);
+      $('closeModal').addEventListener('click', closeModal);
+      $('cancelModal').addEventListener('click', closeModal);
+      $('createBtn').addEventListener('click', createThread);
+      $('newModal').addEventListener('click', event => {if (event.target === $('newModal')) closeModal();});
+      $('sendBtn').addEventListener('click', sendMessage);
+      $('stopBtn').addEventListener('click', interrupt);
+      $('renameBtn').addEventListener('click', rename);
+      $('archiveBtn').addEventListener('click', toggleArchive);
+      $('refresh').addEventListener('click', async () => {await refreshSessions(); if(state.current) await openSession(state.current.id); toast('Workspace refreshed');});
+      $('search').addEventListener('input', event => {state.query = event.target.value.trim().toLowerCase(); renderThreads();});
+      document.querySelectorAll('.filter').forEach(node => node.addEventListener('click', () => {state.filter = node.dataset.filter; document.querySelectorAll('.filter').forEach(item => item.classList.toggle('active', item === node)); renderThreads();}));
+      document.querySelectorAll('.tab').forEach(node => node.addEventListener('click', () => chooseTab(node.dataset.tab)));
+      document.querySelectorAll('.chip').forEach(node => node.addEventListener('click', () => {$('prompt').value = node.dataset.prompt; $('prompt').dispatchEvent(new Event('input')); $('prompt').focus();}));
+      $('prompt').addEventListener('input', () => {$('charCount').textContent = $('prompt').value.length.toLocaleString(); $('sendBtn').disabled = !state.current || !$('prompt').value.trim(); autosize();});
+      $('prompt').addEventListener('keydown', event => {if(event.key === 'Enter' && !event.shiftKey && !event.isComposing){event.preventDefault(); sendMessage();}});
+      $('firstInstruction').addEventListener('input', () => $('firstCount').textContent = $('firstInstruction').value.length.toLocaleString() + ' / 24,000');
+      $('threadId').addEventListener('click', async () => {if(state.current?.thread_id){await navigator.clipboard.writeText(state.current.thread_id); toast('Thread ID copied');}});
+      $('conversationView').addEventListener('scroll', () => {const view=$('conversationView'); state.stickToBottom = view.scrollHeight - view.scrollTop - view.clientHeight < 100;});
+      $('mobileMenu').addEventListener('click', openMobile);
+      $('mobileShade').addEventListener('click', closeMobile);
+      document.addEventListener('keydown', event => {
+        const command = event.metaKey || event.ctrlKey;
+        if(command && event.key.toLowerCase() === 'k'){event.preventDefault(); openMobile(); $('search').focus();}
+        if(command && event.shiftKey && event.key.toLowerCase() === 'n'){event.preventDefault(); openModal();}
+        if(event.key === 'Escape'){closeModal(); closeMobile();}
+      });
+    }
+    async function init() {
+      bind(); renderRoles(); render();
+      try {
+        await refreshSessions();
+        const remembered = localStorage.getItem('fourthlaw.codex.lastSession');
+        const target = state.sessions.find(item => item.id === remembered && !item.archived) || state.sessions.find(item => !item.archived);
+        if (target) await openSession(target.id);
+      } catch {}
+    }
+    init();
+  })();
+  </script>
+</body>
+</html>
