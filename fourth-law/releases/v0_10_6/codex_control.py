@@ -122,7 +122,7 @@ class CodexBridge:
         else:
             result = await self._request(sid, "thread/start", {
                 "model": state["model"], "cwd": ROLE_WORKTREES[state["role"]],
-                "approvalPolicy": "never", "sandbox": "workspace-write",
+                "approvalPolicy": "never",
                 "serviceName": "fourth_law_control_room",
             })
             state["thread_id"] = result["thread"]["id"]
@@ -246,15 +246,6 @@ class CodexBridge:
                 result = await self._request(sid, "turn/start", {
                     "threadId": state["thread_id"], "input": item,
                     "cwd": ROLE_WORKTREES[state["role"]], "approvalPolicy": "never",
-                    "sandboxPolicy": {
-                        "type": "workspaceWrite",
-                        "writableRoots": [ROLE_WORKTREES[state["role"]]],
-                        "readOnlyAccess": {
-                            "type": "restricted", "includePlatformDefaults": True,
-                            "readableRoots": [ROLE_WORKTREES[state["role"]], "/var/lib/fourthlaw-dev/source/.git"],
-                        },
-                        "networkAccess": False,
-                    },
                     "model": state["model"], "effort": "medium", "summary": "concise",
                 })
                 state["turn_id"] = (result.get("turn") or {}).get("id")
