@@ -39,7 +39,12 @@ p=root/'app/control_room.py'; s=p.read_text(); s=s.replace("return {'authenticat
 if "'version': '0.10.6'" not in s: raise SystemExit('control room invariant failed')
 p.write_text(s)
 p=root/'requirements.txt'; s=p.read_text(); p.write_text(s if 'websockets' in s else s.rstrip()+'\nwebsockets>=15,<17\n')
-p=root/'compose.yaml'; s=p.read_text(); mount='      - /run/fourthlaw-codex:/run/fourthlaw-codex:ro'; s=s if mount in s else s.replace('    volumes:\n      - ./data:/data','    volumes:\n      - ./data:/data\n'+mount)
+p=root/'compose.yaml'; s=p.read_text(); mount='      - /run/fourthlaw-codex:/run/fourthlaw-codex:ro'
+if mount not in s:
+    if '    volumes: ["./data:/data"]' in s:
+        s=s.replace('    volumes: ["./data:/data"]', '    volumes:\n      - ./data:/data\n'+mount)
+    else:
+        s=s.replace('    volumes:\n      - ./data:/data','    volumes:\n      - ./data:/data\n'+mount)
 if mount not in s: raise SystemExit('socket mount invariant failed')
 p.write_text(s)
 PY
