@@ -122,7 +122,7 @@ class CodexBridge:
         else:
             result = await self._request(sid, "thread/start", {
                 "model": state["model"], "cwd": ROLE_WORKTREES[state["role"]],
-                "approvalPolicy": "never", "sandbox": "workspaceWrite",
+                "approvalPolicy": "never", "sandbox": "workspace-write",
                 "serviceName": "fourth_law_control_room",
             })
             state["thread_id"] = result["thread"]["id"]
