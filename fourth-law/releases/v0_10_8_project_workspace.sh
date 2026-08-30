@@ -55,8 +55,25 @@ changed="$({
 for required in app/codex_control.py app/static/codex.html tests/test_codex_control.py; do
   echo "$changed" | grep -qx "$required"
 done
-unexpected="$(echo "$changed" | grep -Ev '^(app/codex_control\.py|app/static/codex\.html|tests/test_codex_control\.py)$' || true)"
+unexpected="$(echo "$changed" | grep -Ev '^(app/codex_control\.py|app/static/codex\.html|app/main\.py|app/control_room\.py|compose\.yaml|tests/test_codex_control\.py)$' || true)"
 test -z "$unexpected"
+
+ensure_worktree() {
+  role="$1"
+  path="$WORKTREES/$role"
+  branch="agent/$role"
+  if test -e "$path/.git"; then
+    test -z "$(runuser -u "$DEV_USER" -- git -C "$path" status --porcelain)"
+  elif runuser -u "$DEV_USER" -- git -C "$SOURCE" show-ref --verify --quiet "refs/heads/$branch"; then
+    runuser -u "$DEV_USER" -- git -C "$SOURCE" worktree add "$path" "$branch" >>"$REPORT" 2>&1
+  else
+    runuser -u "$DEV_USER" -- git -C "$SOURCE" worktree add -b "$branch" "$path" main >>"$REPORT" 2>&1
+  fi
+}
+
+STEP=prepare_dedicated_worktrees
+ensure_worktree supervisor
+ensure_worktree architecture
 
 STEP=prepare_verified_worktree
 runuser -u "$DEV_USER" -- python3 - "$CONTROL" <<'PY'
@@ -64,16 +81,16 @@ from pathlib import Path
 import sys
 
 root = Path(sys.argv[1])
-changed = 0
 for path in sorted((root / "app").rglob("*")):
     if not path.is_file() or path.suffix not in {".py", ".html"}:
         continue
     text = path.read_text()
     if "0.10.7" in text:
         path.write_text(text.replace("0.10.7", "0.10.8"))
-        changed += 1
-if changed < 3:
-    raise SystemExit(f"expected version updates in at least three application files, got {changed}")
+for required in (root / "app/main.py", root / "app/control_room.py", root / "app/codex_control.py"):
+    text = required.read_text()
+    if "0.10.7" in text or "0.10.8" not in text:
+        raise SystemExit(f"version invariant failed: {required}")
 
 compose = root / "compose.yaml"
 text = compose.read_text()
@@ -122,7 +139,7 @@ if missing:
 PY
 
 if command -v node >/dev/null 2>&1; then
-  runuser -u "$DEV_USER" -- python3 - "$CONTROL/app/static/codex.html" "$STAGE/codex-script.js" <<'PY'
+  python3 - "$CONTROL/app/static/codex.html" "$STAGE/codex-script.js" <<'PY'
 from pathlib import Path
 import re, sys
 html = Path(sys.argv[1]).read_text()
@@ -143,21 +160,8 @@ runuser -u "$DEV_USER" -- git -C "$CONTROL" \
 control_branch="$(runuser -u "$DEV_USER" -- git -C "$CONTROL" symbolic-ref --short HEAD)"
 runuser -u "$DEV_USER" -- git -C "$SOURCE" merge --ff-only "$control_branch" >>"$REPORT" 2>&1
 
-ensure_worktree() {
-  role="$1"
-  path="$WORKTREES/$role"
-  branch="agent/$role"
-  if test -e "$path/.git"; then
-    test -z "$(runuser -u "$DEV_USER" -- git -C "$path" status --porcelain)"
-    runuser -u "$DEV_USER" -- git -C "$path" merge --ff-only main >>"$REPORT" 2>&1
-  elif runuser -u "$DEV_USER" -- git -C "$SOURCE" show-ref --verify --quiet "refs/heads/$branch"; then
-    runuser -u "$DEV_USER" -- git -C "$SOURCE" worktree add "$path" "$branch" >>"$REPORT" 2>&1
-    runuser -u "$DEV_USER" -- git -C "$path" merge --ff-only main >>"$REPORT" 2>&1
-  else
-    runuser -u "$DEV_USER" -- git -C "$SOURCE" worktree add -b "$branch" "$path" main >>"$REPORT" 2>&1
-  fi
-}
-
+runuser -u "$DEV_USER" -- git -C "$WORKTREES/supervisor" merge --ff-only main >>"$REPORT" 2>&1
+runuser -u "$DEV_USER" -- git -C "$WORKTREES/architecture" merge --ff-only main >>"$REPORT" 2>&1
 ensure_worktree supervisor
 ensure_worktree architecture
 
