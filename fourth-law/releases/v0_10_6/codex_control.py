@@ -21,7 +21,8 @@ from pydantic import BaseModel, Field
 from app.control_room import _auth
 
 router = APIRouter()
-SOCKET_PATH = os.getenv("CODEX_APP_SERVER_SOCKET", "/run/fourthlaw-codex/app.sock")
+APP_SERVER_URL = os.getenv("CODEX_APP_SERVER_URL", "ws://host.docker.internal:4500")
+TOKEN_PATH = Path(os.getenv("CODEX_APP_SERVER_TOKEN_FILE", "/run/secrets/fourthlaw-codex-token"))
 STATE_DIR = Path("/data/codex_sessions")
 STATIC_PATH = Path("/app/app/static/codex.html")
 STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -99,7 +100,14 @@ class CodexBridge:
             except Exception:
                 pass
         try:
-            ws = await websockets.unix_connect(SOCKET_PATH, uri="ws://localhost")
+            token = TOKEN_PATH.read_text().strip()
+            if len(token) < 32:
+                raise RuntimeError("Codex bridge token is unavailable")
+            ws = await websockets.connect(
+                APP_SERVER_URL,
+                additional_headers={"Authorization": f"Bearer {token}"},
+                open_timeout=10,
+            )
         except Exception as exc:
             raise HTTPException(status_code=503, detail=f"Codex runtime unavailable: {str(exc)[:300]}") from exc
         self.connections[sid] = ws
