@@ -71,7 +71,7 @@ test -s "$SSH_KEY"
 
 export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 git clone --branch main --single-branch "$REMOTE" "$SOURCE" >>"$REPORT" 2>&1
-chown -R fourthlaw-dev:fourthlaw-dev "$SOURCE"
+chown -R fourthlaw-dev:fourthlaw-dev "$SOURCE_ROOT"
 
 python3 - "$SOURCE" <<'PY'
 from pathlib import Path
