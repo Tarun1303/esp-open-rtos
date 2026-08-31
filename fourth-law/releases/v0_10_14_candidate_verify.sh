@@ -5,11 +5,10 @@ PROJECT='/opt/fourth-law-agent'
 REPO='/var/lib/fourthlaw-dev/agent-repos/supervisor'
 RELEASE="$REPO/scripts/release_v0.10.14.sh"
 MANIFEST="$REPO/docs/operations/INTEGRATION_MANIFEST_v0.10.14.sha256"
-BUNDLE='/tmp/fourthlaw-v0.10.14-candidate.tar'
+BUNDLE='/tmp/fourthlaw-v0.10.14-root-candidate.tar'
 REPORT='/tmp/fl-v01014-candidate-verify.txt'
 EXPECTED_RELEASE_SHA='fcc232419254773620113e43ef38c79191c6ee000cae8bdf5737ba7a0703e3e4'
 EXPECTED_MANIFEST_SHA='d526c181a2b6b4deb8acbf9502a37b29e4277a8de05ef23c1487a44d82eb8635'
-EXPECTED_BUNDLE_SHA='688af6496ee701e69da19159b9f9d08a609f77885291ca316471488393aea46e'
 IMAGE='fourth-law-agent:v0.10.14-candidate-check'
 TEMP_ROOT=''
 
@@ -49,11 +48,9 @@ systemctl is-active --quiet fourthlaw-codex.service
 test -d "$REPO/.git"
 test -f "$RELEASE"
 test -f "$MANIFEST"
-test -f "$BUNDLE"
 
 printf '%s  %s\n' "$EXPECTED_RELEASE_SHA" "$RELEASE" | sha256sum -c - >>"$REPORT"
 printf '%s  %s\n' "$EXPECTED_MANIFEST_SHA" "$MANIFEST" | sha256sum -c - >>"$REPORT"
-printf '%s  %s\n' "$EXPECTED_BUNDLE_SHA" "$BUNDLE" | sha256sum -c - >>"$REPORT"
 bash -n "$RELEASE"
 
 expected_paths="$(mktemp /tmp/fl-v01014-expected.XXXXXX)"
@@ -85,7 +82,8 @@ if grep -E '(^|/)(\.env|\.ssh|\.aws|\.config|secrets?)(/|$)' "$actual_paths"; th
 fi
 
 (cd "$REPO" && sha256sum -c "$MANIFEST") >>"$REPORT" 2>&1
-
+(cd "$REPO" && tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner -cf "$BUNDLE" -T "$expected_paths")
+root_bundle_sha="$(sha256sum "$BUNDLE" | cut -d' ' -f1)"
 tar -tf "$BUNDLE" > /tmp/fl-v01014-bundle-paths.txt
 if grep -E '(^/|(^|/)\.\.(/|$)|(^|/)(\.env|\.ssh|\.aws|secrets?)(/|$))' /tmp/fl-v01014-bundle-paths.txt; then
   echo unsafe_bundle_path >>"$REPORT"
@@ -134,7 +132,8 @@ rm -f "$expected_paths" "$actual_paths" /tmp/fl-v01014-bundle-paths.txt
   echo changed_paths=13
   echo "release_sha256=$EXPECTED_RELEASE_SHA"
   echo "manifest_sha256=$EXPECTED_MANIFEST_SHA"
-  echo "candidate_sha256=$EXPECTED_BUNDLE_SHA"
+  echo supervisor_sandbox_candidate_sha256=688af6496ee701e69da19159b9f9d08a609f77885291ca316471488393aea46e
+  echo "root_candidate_sha256=$root_bundle_sha"
   echo dependency_complete_image_build=passed
   echo focused_container_tests=passed
   echo full_container_discovery=passed
