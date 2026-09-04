@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>8 Neuron Connection</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">PHYSICS-FIRST EXPERIMENT · V0.1</p>
+        <h1>8 Neuron Connection</h1>
+        <p class="subtitle">Energy-driven recurrent dynamics, local path memory and time-locked associative recall.</p>
+      </div>
+      <div class="status-strip">
+        <span id="runDot" class="dot"></span><span id="runText">Connecting</span>
+        <span class="divider"></span>
+        <span id="activityPill" class="pill">Activity unknown</span>
+      </div>
+    </header>
+
+    <section class="warning">
+      <strong>Scientific boundary:</strong> training <code>1+1 → 2</code> tests association and sequence recall. It does not yet prove that the network learned arithmetic.
+    </section>
+
+    <section class="workspace">
+      <aside class="panel controls">
+        <h2>Condition the network</h2>
+        <label>Input sequence
+          <input id="expression" value="1+1" maxlength="12" />
+        </label>
+        <label>Teacher pattern
+          <input id="target" value="2" maxlength="1" />
+        </label>
+        <div class="button-grid">
+          <button id="train" class="primary">Train continuously</button>
+          <button id="stop">Stop training</button>
+          <button id="recall" class="accent">Recall input</button>
+          <button id="resetDynamic">Clear fast state</button>
+          <button id="resetMemory" class="danger">Reset memory</button>
+        </div>
+
+        <h3>Direct 8-bit sensory input</h3>
+        <div id="inputBits" class="bits"></div>
+        <button id="injectBits">Inject selected bits</button>
+
+        <h3>Environment</h3>
+        <label>Simulation speed <span id="speedValue">10×</span>
+          <input id="speed" type="range" min="1" max="50" value="10" />
+        </label>
+        <label>Background packet rate <span id="rateValue">3.0</span>
+          <input id="rate" type="range" min="0" max="6" step="0.1" value="3.0" />
+        </label>
+      </aside>
+
+      <section class="network-card">
+        <div class="card-head">
+          <div>
+            <span class="kicker">LIVE PHYSICAL STATE</span>
+            <h2>Recurrent network</h2>
+          </div>
+          <div class="legend">
+            <span><i class="cold"></i>resistive</span>
+            <span><i class="warm"></i>conductive memory</span>
+            <span><i class="pulse"></i>signal flow</span>
+          </div>
+        </div>
+        <svg id="network" viewBox="0 0 900 580" role="img" aria-label="Eight neuron recurrent network"></svg>
+        <div class="network-footer">
+          <span>Simulation time <b id="simTime">0.00 s</b></span>
+          <span>Training cycles <b id="cycles">0</b></span>
+          <span>Mode <b id="mode">free run</b></span>
+        </div>
+      </section>
+
+      <aside class="panel output">
+        <h2>Measured output</h2>
+        <div class="prediction">
+          <span>Decoded symbol</span>
+          <strong id="prediction">—</strong>
+          <small id="confidence">confidence gap 0.000</small>
+        </div>
+        <h3>Whole-network output</h3>
+        <div id="outputBits" class="bits output-bits"></div>
+        <div id="scores" class="scores"></div>
+
+        <h3>Continuous activity evidence</h3>
+        <dl class="metrics">
+          <div><dt>Spike rate</dt><dd id="spikeRate">0 Hz</dd></div>
+          <div><dt>Last spike</dt><dd id="lastSpike">—</dd></div>
+          <div><dt>Active nodes</dt><dd id="distinct">0 / 8</dd></div>
+          <div><dt>Selection entropy</dt><dd id="entropy">0 bits</dd></div>
+          <div><dt>Stored energy</dt><dd id="storedEnergy">0</dd></div>
+          <div><dt>Dissipated</dt><dd id="dissipated">0</dd></div>
+        </dl>
+      </aside>
+    </section>
+
+    <section class="bottom-grid">
+      <div class="panel wide">
+        <div class="card-head"><div><span class="kicker">LAST 30 SECONDS</span><h2>Spike raster</h2></div></div>
+        <canvas id="raster" width="1200" height="220"></canvas>
+      </div>
+      <div class="panel formula">
+        <span class="kicker">LIVE LAW</span>
+        <h2>Path resistance</h2>
+        <p class="equation">R<sub>ij</sub> = ρL<sub>ij</sub> / A<sub>ij</sub></p>
+        <p>Repeated causal flow increases <em>A</em>. Resistance is derived from geometry; it is never changed by a separate arbitrary percentage.</p>
+      </div>
+    </section>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
